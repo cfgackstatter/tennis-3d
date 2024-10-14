@@ -1,4 +1,4 @@
-let scene, camera, renderer, court, ball;
+let scene, camera, renderer, court, ball, target;
 
 function init() {
     scene = new THREE.Scene();
@@ -28,6 +28,9 @@ function init() {
     // Create ball in default position
     createTennisBall(0, 2, -23.77 / 2); // Center of baseline, 1 meter high
 
+    // Place initial target
+    createTarget(0, 0, 6.4);
+
     // Add ambient light
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
@@ -42,6 +45,7 @@ function init() {
 
     // Add event listener for ball placement
     document.getElementById('place-ball').addEventListener('click', handleBallPlacement);
+    document.getElementById('place-target').addEventListener('click', handleTargetPlacement);
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
@@ -208,6 +212,46 @@ function handleBallPlacement() {
     }
     
     updateBallPosition(widthCoord, heightCoord);
+}
+
+function createTarget(width, height, z) {
+    const targetGeometry = new THREE.SphereGeometry(0.05, 32, 32);
+    const targetMaterial = new THREE.MeshPhongMaterial({
+      color: 0xFF0000,
+      emissive: 0x330000,
+      shininess: 30
+    });
+    target = new THREE.Mesh(targetGeometry, targetMaterial);
+    
+    const courtLength = 23.77;
+    target.position.set(width, height, z);
+    scene.add(target);
+    
+    console.log(`Target created at position: (${width}, ${height}, ${z})`);
+}
+  
+function updateTargetPosition(width, height) {
+    const courtWidth = 10.97;
+    const courtLength = 23.77;
+    const clampedWidth = Math.max(-courtWidth/2, Math.min(courtWidth/2, width));
+    
+    if (target) {
+      target.position.set(clampedWidth, height, courtLength / 2);
+      console.log(`Target updated to position: (${clampedWidth}, ${height}, ${courtLength / 2})`);
+    } else {
+      createTarget(clampedWidth, height, courtLength / 2);
+    }
+}
+  
+function handleTargetPlacement() {
+    const widthCoord = parseFloat(document.getElementById('target-width-coord').value);
+    let heightCoord = parseFloat(document.getElementById('target-height-coord').value);
+    
+    if (isNaN(heightCoord) || heightCoord < 0) {
+      heightCoord = 0;
+    }
+    
+    updateTargetPosition(widthCoord, heightCoord);
 }
 
 function onWindowResize() {

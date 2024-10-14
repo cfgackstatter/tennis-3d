@@ -10,7 +10,7 @@
     <style>
         body { margin: 0; overflow: hidden; }
         #scene-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #ball-input {
+        #input-container {
             position: absolute;
             top: 10px;
             left: 10px;
@@ -19,20 +19,32 @@
             border-radius: 5px;
             z-index: 100;
         }
-        #ball-input input {
+        #input-container input {
             width: 50px;
             margin-right: 10px;
+        }
+        #ball-input, #target-input {
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
     <div id="scene-container"></div>
-    <div id="ball-input">
-        <label for="width-coord">Width Coordinate (- right, + left of center, max ±5.485m):</label>
-        <input type="number" id="width-coord" step="0.1" value="0" min="-5.485" max="5.485">
-        <label for="height-coord">Height Coordinate (meters above ground):</label>
-        <input type="number" id="height-coord" step="0.1" value="2" min="0">
-        <button id="place-ball">Place Ball</button>
+    <div id="input-container">
+        <div id="ball-input">
+            <label for="width-coord">Width Coordinate (- right, + left of center, max ±5.485m):</label>
+            <input type="number" id="width-coord" step="0.1" value="0" min="-5.485" max="5.485">
+            <label for="height-coord">Height Coordinate (meters above ground):</label>
+            <input type="number" id="height-coord" step="0.1" value="2" min="0">
+            <button id="place-ball">Place Ball</button>
+        </div>
+        <div id="target-input">
+            <label for="target-width-coord">Target Width Coordinate:</label>
+            <input type="number" id="target-width-coord" step="0.1" value="4.115">
+            <label for="target-height-coord">Target Height Coordinate:</label>
+            <input type="number" id="target-height-coord" step="0.1" value="0">
+            <button id="place-target">Place Target</button>
+        </div>
     </div>
     <script src="{{ url_for('static', filename='js/tennis_court.js') }}"></script>
 </body>
