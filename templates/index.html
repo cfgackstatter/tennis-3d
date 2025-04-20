@@ -3,49 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tennis Court</title>
+    <title>3D Tennis Court Simulator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Include Three.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        #scene-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #input-container {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.7);
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 100;
-        }
-        #input-container input {
-            width: 50px;
-            margin-right: 10px;
-        }
-        #ball-input, #target-input {
-            margin-bottom: 10px;
-        }
-    </style>
+    <!-- Include OrbitControls for camera manipulation -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
 </head>
 <body>
-    <div id="scene-container"></div>
-    <div id="input-container">
-        <div id="ball-input">
-            <label for="width-coord">Width Coordinate (- right, + left of center, max ±5.485m):</label>
-            <input type="number" id="width-coord" step="0.1" value="0" min="-5.485" max="5.485">
-            <label for="height-coord">Height Coordinate (meters above ground):</label>
-            <input type="number" id="height-coord" step="0.1" value="2" min="0">
-            <button id="place-ball">Place Ball</button>
+    <header>
+        <h1>3D Tennis Court Simulator</h1>
+    </header>
+
+    <div id="scene-container">
+        <!-- The 3D scene will be rendered here -->
+    </div>
+
+    <div id="control-panel">
+        <div class="panel-header">
+            <h3>Controls</h3>
+            <button id="toggle-panel" title="Expand/Collapse panel">≡</button>
         </div>
-        <div id="target-input">
-            <label for="target-width-coord">Target Width Coordinate:</label>
-            <input type="number" id="target-width-coord" step="0.1" value="4.115">
-            <label for="target-height-coord">Target Height Coordinate:</label>
-            <input type="number" id="target-height-coord" step="0.1" value="0">
-            <button id="place-target">Place Target</button>
+        
+        <div class="panel-content">
+            <div class="control-section">
+                <h4>Ball Placement</h4>
+                <div class="input-group">
+                    <label for="baseline-position" title="Position along baseline (-: right, +: left of center)">Baseline:</label>
+                    <input type="number" id="baseline-position" step="0.1" value="-1">
+                </div>
+                
+                <div class="input-group">
+                    <label for="distance-from-baseline" title="Distance from baseline into the court">Distance:</label>
+                    <input type="number" id="distance-from-baseline" min="0" step="0.1" value="0.3">
+                </div>
+                
+                <div class="input-group">
+                    <label for="ball-height" title="Height above ground">Height:</label>
+                    <input type="number" id="ball-height" min="0" step="0.1" value="3">
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h4>Target Placement</h4>
+                <div class="input-group">
+                    <label for="target-width" title="Distance from center (-: right, +: left)">Width:</label>
+                    <input type="number" id="target-width" step="0.1" value="3.6">
+                </div>
+                
+                <div class="input-group">
+                    <label for="target-depth" title="Distance from service line (-: toward net, +: toward baseline)">Depth:</label>
+                    <input type="number" id="target-depth" min="-6.4" max="5.485" step="0.1" value="-0.6">
+                </div>
+            </div>
         </div>
     </div>
+    
+    <div id="instructions">
+        <p><strong>Camera:</strong> Click and drag to rotate. Scroll to zoom.</p>
+        <p><strong>Court Size:</strong> 23.77m × 10.97m</p>
+    </div>
+
+    <div id="net-clearance-box">
+        <div class="clearance-title">NET CLEARANCE</div>
+        <div id="clearance-value">0.00 m</div>
+    </div>
+    
+    <!-- Include our tennis court script -->
     <script src="{{ url_for('static', filename='js/tennis_court.js') }}"></script>
 </body>
 </html>
