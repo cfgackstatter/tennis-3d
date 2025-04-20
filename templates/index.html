@@ -6,7 +6,7 @@
     <title>3D Tennis Court Simulator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Include Three.js library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
     <!-- Include OrbitControls for camera manipulation -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
 </head>
@@ -52,8 +52,13 @@
                 </div>
                 
                 <div class="input-group">
-                    <label for="launch-angle" title="Vertical launch angle in degrees (-45-45)">Angle:</label>
+                    <label for="launch-angle" title="Vertical launch angle in degrees (-45-45)">V-Angle:</label>
                     <input type="number" id="launch-angle" min="-45" max="45" step="1" value="10">
+                </div>
+
+                <div class="input-group">
+                    <label for="horizontal-angle" title="Horizontal launch angle in degrees (0=straight ahead, -=left, +=right)">H-Angle:</label>
+                    <input type="number" id="horizontal-angle" min="-45" max="45" step="1" value="0">
                 </div>
                 
                 <div class="input-group">

@@ -31,6 +31,38 @@ let trajectoryLine; // Will reference the trajectory visualization
  * Initialize the 3D scene, camera, renderer, and objects
  */
 function init() {
+    // Browser detection for Firefox WebGL issues
+    if (navigator.userAgent.indexOf("Firefox") > -1) {
+        console.log("Firefox detected");
+        // Add a warning message that's visible to the user
+        const warningElement = document.createElement('div');
+        warningElement.style.position = 'absolute';
+        warningElement.style.top = '50%';
+        warningElement.style.left = '50%';
+        warningElement.style.transform = 'translate(-50%, -50%)';
+        warningElement.style.color = 'red';
+        warningElement.style.fontWeight = 'bold';
+        warningElement.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        warningElement.style.padding = '20px';
+        warningElement.style.borderRadius = '5px';
+        warningElement.style.zIndex = '1000';
+        warningElement.innerHTML = 'Firefox detected: If the 3D tennis court is not visible, please enable hardware acceleration in Firefox settings or try Chrome/Brave browser.';
+        document.getElementById('scene-container').appendChild(warningElement);
+    }
+
+    // Feature detection for WebGL support
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (!gl) {
+            document.getElementById('scene-container').innerHTML = '<div style="color: red; font-weight: bold; text-align: center; margin-top: 100px;">WebGL is not supported by your browser. Please try using Chrome, Brave, Edge, or enable hardware acceleration in your browser settings.</div>';
+            return; // Exit initialization if WebGL is not supported
+        }
+    } catch (e) {
+        document.getElementById('scene-container').innerHTML = '<div style="color: red; font-weight: bold; text-align: center; margin-top: 100px;">Error initializing WebGL. Please try using Chrome, Brave, Edge, or enable hardware acceleration in your browser settings.</div>';
+        return; // Exit initialization if there's an error
+    }
+
     // Create scene with sky blue background
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87CEEB);
@@ -470,26 +502,25 @@ function updateConnectionLine() {
     // Get trajectory parameters from UI
     const initialSpeedKmh = parseFloat(document.getElementById('initial-speed').value) || 180;
     const initialSpeed = initialSpeedKmh / 3.6; // Convert km/h to m/s
-    const launchAngle = parseFloat(document.getElementById('launch-angle').value) || 10;
+    const verticalAngle = parseFloat(document.getElementById('launch-angle').value) || 10;
+    const horizontalAngle = parseFloat(document.getElementById('horizontal-angle').value) || 0;
     const spinRateRPM  = parseFloat(document.getElementById('spin-rate').value) || 1800;
     const spinRate = spinRateRPM / 60; // Convert RPM to rotations per second
     const spinAxis = parseFloat(document.getElementById('spin-axis').value) || 90;
 
-    // Calculate initial velocity vector
-    // Direction from ball to court center (or wherever you want to aim)
-    const horizontalDirection = new THREE.Vector3(
-        0 - ball.position.x, // Aim toward center of court
-        0,
-        SERVICE_LINE_DISTANCE - ball.position.z // Aim toward service line
-    ).normalize();
+    // Convert angles to radians
+    const verticalRadians = verticalAngle * Math.PI / 180;
+    const horizontalRadians = horizontalAngle * Math.PI / 180;
 
-    // Apply launch angle
-    const launchRadians = launchAngle * Math.PI / 180;
-    const initialVelocity = new THREE.Vector3(
-        horizontalDirection.x * initialSpeed * Math.cos(launchRadians),
-        initialSpeed * Math.sin(launchRadians),
-        horizontalDirection.z * initialSpeed * Math.cos(launchRadians)
-    );
+    // Calculate initial velocity components
+    // Using the formula from search result #4
+    // x: left-right (baseline direction), y: vertical, z: depth (court length direction)
+    const vx = initialSpeed * Math.cos(verticalRadians) * Math.sin(horizontalRadians);
+    const vy = initialSpeed * Math.sin(verticalRadians);
+    const vz = initialSpeed * Math.cos(verticalRadians) * Math.cos(horizontalRadians);
+
+    // Create the velocity vector
+    const initialVelocity = new THREE.Vector3(vx, vy, vz);
 
     // Calculate spin vector
     const spinRadians = spinAxis * Math.PI / 180;
@@ -624,6 +655,7 @@ function setupEventListeners() {
     // New trajectory parameter listeners
     document.getElementById('initial-speed').addEventListener('input', updateConnectionLine);
     document.getElementById('launch-angle').addEventListener('input', updateConnectionLine);
+    document.getElementById('horizontal-angle').addEventListener('input', updateConnectionLine);
     document.getElementById('spin-rate').addEventListener('input', updateConnectionLine);
     document.getElementById('spin-axis').addEventListener('input', updateConnectionLine);
 
@@ -633,6 +665,7 @@ function setupEventListeners() {
     document.getElementById('ball-height').value = "3";
     document.getElementById('initial-speed').value = "180"; // 180 km/h = 50 m/s
     document.getElementById('launch-angle').value = "10";
+    document.getElementById('horizontal-angle').value = "0";
     document.getElementById('spin-rate').value = "1800"; // 1800 RPM = 30 rotations per second
     document.getElementById('spin-axis').value = "90"; // 90 = topsin
     
