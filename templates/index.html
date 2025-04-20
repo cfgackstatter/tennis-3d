@@ -43,17 +43,27 @@
                     <input type="number" id="ball-height" min="0" step="0.1" value="3">
                 </div>
             </div>
-            
+
             <div class="control-section">
-                <h4>Target Placement</h4>
+                <h4>Ball Physics</h4>
                 <div class="input-group">
-                    <label for="target-width" title="Distance from center (-: right, +: left)">Width:</label>
-                    <input type="number" id="target-width" step="0.1" value="3.6">
+                    <label for="initial-speed" title="Initial ball speed in km/h (160-230 for pro first serve)">Speed:</label>
+                    <input type="number" id="initial-speed" min="20" max="260" step="1" value="180">
                 </div>
                 
                 <div class="input-group">
-                    <label for="target-depth" title="Distance from service line (-: toward net, +: toward baseline)">Depth:</label>
-                    <input type="number" id="target-depth" min="-6.4" max="5.485" step="0.1" value="-0.6">
+                    <label for="launch-angle" title="Vertical launch angle in degrees (-45-45)">Angle:</label>
+                    <input type="number" id="launch-angle" min="-45" max="45" step="1" value="10">
+                </div>
+                
+                <div class="input-group">
+                    <label for="spin-rate" title="Ball spin in RPM (1000-5000 for typical pro spin)">Spin:</label>
+                    <input type="number" id="spin-rate" min="100" max="5000" step="100" value="1800">
+                </div>
+                
+                <div class="input-group">
+                    <label for="spin-axis" title="Spin axis tilt in degrees (0/180=sidespin, 90=topspin)">Spin Axis:</label>
+                    <input type="number" id="spin-axis" min="0" max="180" step="5" value="90">
                 </div>
             </div>
         </div>

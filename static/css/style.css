@@ -236,6 +236,18 @@ button:hover {
     color: #FF0000;
 }
 
+/* Ball Physics section */
+.physics-section {
+    margin-top: 10px;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+}
+
+/* Make the control panel a bit taller to fit new controls */
+#control-panel {
+    max-height: 80vh;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     #control-panel {

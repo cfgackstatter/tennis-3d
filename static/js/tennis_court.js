@@ -16,6 +16,17 @@ const SERVICE_LINE_DISTANCE = 6.4;
 const NET_HEIGHT = 1.07;
 const NET_CENTER_HEIGHT = 0.914;
 
+// Physics constants
+const GRAVITY = 9.81; // m/s²
+const AIR_DENSITY = 1.21; // kg/m³
+const BALL_RADIUS = 0.033; // m (standard tennis ball)
+const BALL_MASS = 0.057; // kg (standard tennis ball)
+const BALL_AREA = Math.PI * BALL_RADIUS * BALL_RADIUS; // m²
+
+// Trajectory parameters
+let trajectoryPoints = []; // Will store calculated trajectory points
+let trajectoryLine; // Will reference the trajectory visualization
+
 /**
  * Initialize the 3D scene, camera, renderer, and objects
  */
@@ -455,76 +466,123 @@ function updateConnectionLine() {
     }
     
     if (!ball || !target) return;
-    
-    // Create line geometry between ball and target
-    const points = [];
-    points.push(new THREE.Vector3(ball.position.x, ball.position.y, ball.position.z));
-    points.push(new THREE.Vector3(target.position.x, target.position.y, target.position.z));
-    
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-    const lineMaterial = new THREE.LineBasicMaterial({ 
-        color: 0x00ffff, 
-        linewidth: 2 
-    });
-    
-    connectionLine = new THREE.Line(lineGeometry, lineMaterial);
-    scene.add(connectionLine);
-    
-    // Calculate intersection with net plane (at z=0)
-    const ballPos = ball.position;
-    const targetPos = target.position;
-    
-    // Create a vector from ball to target
-    const direction = new THREE.Vector3().subVectors(targetPos, ballPos);
-    
-    // Calculate how far along this vector we need to go to reach z=0 (net plane)
-    // Using parametric equation: ballPos + t * direction = intersectionPoint
-    // We know intersectionPoint.z = 0, so:
-    // ballPos.z + t * direction.z = 0
-    // t = -ballPos.z / direction.z
-    
-    const t = -ballPos.z / direction.z;
-    
-    // Only create intersection marker if the line actually crosses the net
-    if (t >= 0 && t <= 1) {
-        // Calculate the intersection point
-        const intersectionPoint = new THREE.Vector3();
-        intersectionPoint.copy(ballPos).addScaledVector(direction, t);
 
-        // Calculate the net height at this x position
-        const netPostDistance = SINGLES_WIDTH + (2 * 0.91); // Singles width plus 0.91m on each side
-        const normalizedX = intersectionPoint.x / (netPostDistance/2);
-        const netHeightAtX = NET_CENTER_HEIGHT + (NET_HEIGHT - NET_CENTER_HEIGHT) * Math.abs(normalizedX);
+    // Get trajectory parameters from UI
+    const initialSpeedKmh = parseFloat(document.getElementById('initial-speed').value) || 180;
+    const initialSpeed = initialSpeedKmh / 3.6; // Convert km/h to m/s
+    const launchAngle = parseFloat(document.getElementById('launch-angle').value) || 10;
+    const spinRateRPM  = parseFloat(document.getElementById('spin-rate').value) || 1800;
+    const spinRate = spinRateRPM / 60; // Convert RPM to rotations per second
+    const spinAxis = parseFloat(document.getElementById('spin-axis').value) || 90;
 
-        // Calculate clearance (positive if above net, negative if through net)
-        const clearance = intersectionPoint.y - netHeightAtX;
+    // Calculate initial velocity vector
+    // Direction from ball to court center (or wherever you want to aim)
+    const horizontalDirection = new THREE.Vector3(
+        0 - ball.position.x, // Aim toward center of court
+        0,
+        SERVICE_LINE_DISTANCE - ball.position.z // Aim toward service line
+    ).normalize();
 
-        // Update the DOM-based net clearance display
-        const clearanceValueElement = document.getElementById('clearance-value');
-        if (clearanceValueElement) {
-            clearanceValueElement.textContent = clearance.toFixed(2) + ' m';
-            
-            // Update color based on clearance
-            if (clearance > 0) {
-                clearanceValueElement.className = 'positive-clearance';
-            } else {
-                clearanceValueElement.className = 'negative-clearance';
-            }
+    // Apply launch angle
+    const launchRadians = launchAngle * Math.PI / 180;
+    const initialVelocity = new THREE.Vector3(
+        horizontalDirection.x * initialSpeed * Math.cos(launchRadians),
+        initialSpeed * Math.sin(launchRadians),
+        horizontalDirection.z * initialSpeed * Math.cos(launchRadians)
+    );
+
+    // Calculate spin vector
+    const spinRadians = spinAxis * Math.PI / 180;
+    const spinVector = new THREE.Vector3(
+        Math.sin(spinRadians) * spinRate,
+        Math.cos(spinRadians) * spinRate,
+        0
+    );
+
+    // Calculate trajectory
+    const result = calculateTrajectory(
+        ball.position.clone(),
+        initialVelocity,
+        spinVector
+    );
+
+    trajectoryPoints = result.trajectoryPoints;
+
+    // Visualize trajectory
+    visualizeTrajectory(trajectoryPoints);
+    
+    // Find intersection with net plane
+    findNetIntersection(trajectoryPoints);
+    
+    // Update target position to landing point if available
+    if (result.landingPoint) {
+        if (target) {
+            scene.remove(target);
         }
-
-        // Determine color based on whether the line crosses above or through the net
-        const markerColor = clearance > 0 ? 0x00FF00 : 0xFF0000; // Green if above, red if through
         
-        // Create a sphere to mark the intersection
-        const markerGeometry = new THREE.SphereGeometry(0.08, 16, 16);
-        const markerMaterial = new THREE.MeshBasicMaterial({ color: markerColor });
-        intersectionMarker = new THREE.Mesh(markerGeometry, markerMaterial);
-        intersectionMarker.position.copy(intersectionPoint);
-        scene.add(intersectionMarker);
+        // Create new target at landing point
+        createTarget(result.landingPoint.x, 0, result.landingPoint.z);
+    }
+}
 
-        console.log(`Intersection at (${intersectionPoint.x.toFixed(2)}, ${intersectionPoint.y.toFixed(2)}, ${intersectionPoint.z.toFixed(2)})`);
-        console.log(`Net height at this position: ${netHeightAtX.toFixed(2)}`);
-        console.log(`Line crosses ${intersectionPoint.y > netHeightAtX ? 'ABOVE' : 'THROUGH'} the net`);
+/**
+ * Find where the trajectory intersects with the net and mark it
+ * 
+ * @param {Array} trajectoryPoints - Array of points along the trajectory
+ */
+function findNetIntersection(trajectoryPoints) {
+    // Check each segment of the trajectory for intersection with net plane (z=0)
+    for (let i = 0; i < trajectoryPoints.length - 1; i++) {
+        const p1 = trajectoryPoints[i];
+        const p2 = trajectoryPoints[i + 1];
+        
+        // If this segment crosses the net plane (z=0)
+        if ((p1.z <= 0 && p2.z >= 0) || (p1.z >= 0 && p2.z <= 0)) {
+            // Calculate intersection point using parametric equation
+            const t = Math.abs(p1.z) / Math.abs(p2.z - p1.z);
+            const intersectionPoint = new THREE.Vector3(
+                p1.x + t * (p2.x - p1.x),
+                p1.y + t * (p2.y - p1.y),
+                0
+            );
+            
+            // Calculate the net height at this x position
+            const netPostDistance = SINGLES_WIDTH + (2 * 0.91);
+            const normalizedX = intersectionPoint.x / (netPostDistance/2);
+            const netHeightAtX = NET_CENTER_HEIGHT + (NET_HEIGHT - NET_CENTER_HEIGHT) * Math.abs(normalizedX);
+            
+            // Calculate clearance (positive if above net, negative if through net)
+            const clearance = intersectionPoint.y - netHeightAtX;
+            
+            // Update the DOM-based net clearance display
+            const clearanceValueElement = document.getElementById('clearance-value');
+            if (clearanceValueElement) {
+                clearanceValueElement.textContent = clearance.toFixed(2) + ' m';
+                
+                // Update color based on clearance
+                if (clearance > 0) {
+                    clearanceValueElement.className = 'positive-clearance';
+                } else {
+                    clearanceValueElement.className = 'negative-clearance';
+                }
+            }
+            
+            // Determine color based on whether the trajectory crosses above or through the net
+            const markerColor = clearance > 0 ? 0x00FF00 : 0xFF0000; // Green if above, red if through
+            
+            // Create a sphere to mark the intersection
+            const markerGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+            const markerMaterial = new THREE.MeshBasicMaterial({ color: markerColor });
+            intersectionMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+            intersectionMarker.position.copy(intersectionPoint);
+            scene.add(intersectionMarker);
+            
+            console.log(`Intersection at (${intersectionPoint.x.toFixed(2)}, ${intersectionPoint.y.toFixed(2)}, ${intersectionPoint.z.toFixed(2)})`);
+            console.log(`Net height at this position: ${netHeightAtX.toFixed(2)}`);
+            console.log(`Line crosses ${intersectionPoint.y > netHeightAtX ? 'ABOVE' : 'THROUGH'} the net`);
+            
+            break;
+        }
     }
 }
 
@@ -562,15 +620,21 @@ function setupEventListeners() {
     document.getElementById('baseline-position').addEventListener('input', handleBallPositionChange);
     document.getElementById('distance-from-baseline').addEventListener('input', handleBallPositionChange);
     document.getElementById('ball-height').addEventListener('input', handleBallPositionChange);
-    document.getElementById('target-width').addEventListener('input', handleTargetPositionChange);
-    document.getElementById('target-depth').addEventListener('input', handleTargetPositionChange);
 
-    // In your setupEventListeners function or after DOM is loaded
+    // New trajectory parameter listeners
+    document.getElementById('initial-speed').addEventListener('input', updateConnectionLine);
+    document.getElementById('launch-angle').addEventListener('input', updateConnectionLine);
+    document.getElementById('spin-rate').addEventListener('input', updateConnectionLine);
+    document.getElementById('spin-axis').addEventListener('input', updateConnectionLine);
+
+    // Set initial values
     document.getElementById('baseline-position').value = "-1";
     document.getElementById('distance-from-baseline').value = "0.3";
     document.getElementById('ball-height').value = "3";
-    document.getElementById('target-width').value = "3.6";
-    document.getElementById('target-depth').value = "-0.6";
+    document.getElementById('initial-speed').value = "180"; // 180 km/h = 50 m/s
+    document.getElementById('launch-angle').value = "10";
+    document.getElementById('spin-rate').value = "1800"; // 1800 RPM = 30 rotations per second
+    document.getElementById('spin-axis').value = "90"; // 90 = topsin
     
     // Add toggle panel functionality
     document.getElementById('toggle-panel').addEventListener('click', function() {
@@ -590,23 +654,116 @@ function handleBallPositionChange() {
     const distanceFromBaseline = parseFloat(document.getElementById('distance-from-baseline').value);
     let ballHeight = parseFloat(document.getElementById('ball-height').value);
     
-    // Set a default height if not provided or if it's zero
+    // Set a default height if not provided or if it's negative
     if (isNaN(ballHeight) || ballHeight < 0) {
         ballHeight = 0; // Default height
         document.getElementById('ball-height').value = "0";
+        updateConnectionLine(); // Update trajectory
     }
     
     updateBallPosition(baselinePosition, distanceFromBaseline, ballHeight);
 }
 
+function calculateLiftCoefficient(speed, spinRate) {
+    const spinSpeed = BALL_RADIUS * spinRate; // vspin = R*ω
+    return 1 / (2 + (speed / spinSpeed));
+}
+
+function calculateDragCoefficient(speed, spinRate) {
+    const spinSpeed = BALL_RADIUS * spinRate;
+    const ratio = speed / spinSpeed;
+    return 0.55 + 1 / Math.pow(22.5 + 4.2 * Math.pow(ratio, 2.5), 0.4);
+}
+
 /**
- * Handle changes to target position input fields
+ * Calculate the trajectory of a tennis ball considering gravity, drag, and Magnus effect
+ * 
+ * @param {THREE.Vector3} initialPos - Initial position of the ball
+ * @param {THREE.Vector3} initialVel - Initial velocity vector
+ * @param {THREE.Vector3} spinVector - Spin vector (direction and magnitude)
+ * @param {number} dt - Time step for simulation (seconds)
+ * @param {number} steps - Number of steps to simulate
+ * @returns {Array} Array of position vectors representing the trajectory
  */
-function handleTargetPositionChange() {
-    const targetWidth = parseFloat(document.getElementById('target-width').value);
-    const targetDepth = parseFloat(document.getElementById('target-depth').value);
+function calculateTrajectory(initialPos, initialVel, spinVector, dt = 0.005, steps = 1000) {
+    const positions = [initialPos.clone()];
+    let position = initialPos.clone();
+    let velocity = initialVel.clone();
+    let landingPoint = null;
     
-    updateTargetPosition(targetWidth, targetDepth);
+    for (let i = 0; i < steps; i++) {
+        // Calculate speed (magnitude of velocity)
+        const speed = velocity.length();
+        if (speed === 0) break;
+        
+        // Unit vector in direction of velocity
+        const velocityUnit = velocity.clone().normalize();
+        
+        // Drag force: -0.5 * Cd * rho * A * v^2 * v_hat
+        const dragCoef = calculateDragCoefficient(speed, spinVector.length());
+        const dragForce = velocityUnit.clone().multiplyScalar(-0.5 * dragCoef * AIR_DENSITY * BALL_AREA * speed * speed);
+        
+        // Magnus force: 0.5 * Cl * rho * A * v^2 * (spin × v_hat)
+        const magnusDirection = new THREE.Vector3();
+        magnusDirection.crossVectors(spinVector, velocityUnit);
+        const liftCoef = calculateLiftCoefficient(speed, spinVector.length());
+        const magnusForce = magnusDirection.multiplyScalar(0.5 * liftCoef * AIR_DENSITY * BALL_AREA * speed * speed);
+        
+        // Gravity force: (0, -m*g, 0)
+        const gravityForce = new THREE.Vector3(0, -BALL_MASS * GRAVITY, 0);
+        
+        // Sum forces and calculate acceleration
+        const totalForce = new THREE.Vector3().addVectors(dragForce, magnusForce).add(gravityForce);
+        const acceleration = totalForce.multiplyScalar(1 / BALL_MASS);
+        
+        // Update velocity and position (Euler integration)
+        velocity.add(acceleration.clone().multiplyScalar(dt));
+        position.add(velocity.clone().multiplyScalar(dt));
+        
+        // Add position to trajectory
+        positions.push(position.clone());
+        
+        // Stop if ball hits the ground
+        if (position.y <= 0) {
+            position.y = 0; // Set exactly to ground level
+            positions.push(position.clone());
+            landingPoint = position.clone();
+            break;
+        }
+    }
+    
+    return {
+        trajectoryPoints: positions,
+        landingPoint: landingPoint
+    };
+}
+
+/**
+ * Create or update the visual representation of the ball trajectory
+ * 
+ * @param {Array} trajectoryPoints - Array of Vector3 points along the trajectory
+ */
+function visualizeTrajectory(trajectoryPoints) {
+    // Remove existing trajectory line if it exists
+    if (trajectoryLine) {
+        scene.remove(trajectoryLine);
+    }
+    
+    // Create geometry from trajectory points
+    const geometry = new THREE.BufferGeometry().setFromPoints(trajectoryPoints);
+    
+    // Create material for the trajectory line
+    const material = new THREE.LineBasicMaterial({
+        color: 0x00ffff,
+        linewidth: 2,
+        opacity: 1.0,
+        transparent: true
+    });
+    
+    // Create the line and add it to the scene
+    trajectoryLine = new THREE.Line(geometry, material);
+    scene.add(trajectoryLine);
+    console.log("Trajectory line added with", trajectoryPoints.length, "points");
 }
 
 /**
