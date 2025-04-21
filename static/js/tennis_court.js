@@ -77,32 +77,24 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('scene-container').appendChild(renderer.domElement);
 
-    // Create court surface
-    createCourtSurface();
-    
-    // Add court lines
-    addCourtLines();
-
-    // Add net
-    addNet();
-
-    // Create ball in default position (center of baseline, 3 meter high)
-    createTennisBall(0, 3, -COURT_LENGTH / 2);
-
-    // Ensure ball projection is properly initialized
-    updateBallProjection();
-
-    // Update baseline position and distance in the actual creation
-    updateBallPosition(-1, 0.3, 3); // Baseline: -1m, Distance: 0.3m, Height: 3m
-
-    // Place initial target
-    createTarget(3.6, 0, SERVICE_LINE_DISTANCE - 0.6); // Width: 3.6m, Depth: -0.6m
-
-    // Update the connection line and intersection marker
-    updateConnectionLine();
-
     // Add lighting
     setupLighting();
+
+    // Get initial ball position from input fields
+    const baselinePosition = parseFloat(document.getElementById('baseline-position').value) || -1;
+    const distanceFromBaseline = parseFloat(document.getElementById('distance-from-baseline').value) || 0.3;
+    const ballHeight = parseFloat(document.getElementById('ball-height').value) || 3;
+
+    // Create ball directly at the correct position
+    createTennisBall(baselinePosition, ballHeight, -COURT_LENGTH/2 + distanceFromBaseline);
+
+    // Create court and net
+    createCourtSurface();
+    addCourtLines();
+    addNet();
+
+    // Calculate trajectory and place target
+    updateConnectionLine();
 
     // Add orbit controls for camera manipulation
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -377,12 +369,6 @@ function handleBallPlacement() {
     const distanceFromBaseline = parseFloat(document.getElementById('distance-from-baseline').value);
     let ballHeight = parseFloat(document.getElementById('ball-height').value);
     
-    // Set a default height if not provided or if it's zero
-    if (isNaN(ballHeight) || ballHeight <= 0) {
-        ballHeight = 1; // Default height of 1 meter
-        document.getElementById('ball-height').value = "1";
-    }
-    
     updateBallPosition(baselinePosition, distanceFromBaseline, ballHeight);
 }
 
@@ -450,43 +436,6 @@ function createTarget(width, height, z) {
     console.log(`Target created at position: (${width}, ${height}, ${z})`);
 }
 
-/**
- * Update the target's position based on user input
- * 
- * @param {number} width - Distance from center (x-coordinate)
- * @param {number} depth - Distance from service line (+ toward baseline, - toward net)
- */
-function updateTargetPosition(width, depth) {
-    // Clamp the width to ensure the target stays within court boundaries
-    const clampedWidth = Math.max(-COURT_WIDTH/2, Math.min(COURT_WIDTH/2, width));
-    
-    // Calculate z-coordinate (service line is at SERVICE_LINE_DISTANCE)
-    const zPosition = SERVICE_LINE_DISTANCE + depth;
-    
-    // Target height is fixed at 0 (on the ground)
-    const targetHeight = 0;
-    
-    if (target) {
-        target.position.set(clampedWidth, targetHeight, zPosition);
-        console.log(`Target updated to position: (${clampedWidth}, ${targetHeight}, ${zPosition})`);
-    } else {
-        createTarget(clampedWidth, targetHeight, zPosition);
-    }
-
-    // Update the connection line and intersection marker
-    updateConnectionLine();
-}
-
-/**
- * Handle the target placement button click
- */
-function handleTargetPlacement() {
-    const targetWidth = parseFloat(document.getElementById('target-width').value);
-    const targetDepth = parseFloat(document.getElementById('target-depth').value);
-    
-    updateTargetPosition(targetWidth, targetDepth);
-}
-
 // Add this function to create and update the connection line and intersection marker
 function updateConnectionLine() {
     // Remove existing line and marker if they exist
@@ -497,27 +446,32 @@ function updateConnectionLine() {
         scene.remove(intersectionMarker);
     }
     
-    if (!ball || !target) return;
+    if (!ball) return;
 
     // Get trajectory parameters from UI
-    const initialSpeedKmh = parseFloat(document.getElementById('initial-speed').value) || 180;
+    const initialSpeedKmh = parseFloat(document.getElementById('initial-speed').value) ?? 160;
     const initialSpeed = initialSpeedKmh / 3.6; // Convert km/h to m/s
-    const verticalAngle = parseFloat(document.getElementById('launch-angle').value) || 10;
-    const horizontalAngle = parseFloat(document.getElementById('horizontal-angle').value) || 0;
-    const spinRateRPM  = parseFloat(document.getElementById('spin-rate').value) || 1800;
+    const verticalAngle = parseFloat(document.getElementById('launch-angle').value) ?? -5;
+    const horizontalAngle = parseFloat(document.getElementById('horizontal-angle').value) ?? 10;
+    const spinRateRPM  = parseFloat(document.getElementById('spin-rate').value) ?? 1800;
     const spinRate = spinRateRPM / 60; // Convert RPM to rotations per second
-    const spinAxis = parseFloat(document.getElementById('spin-axis').value) || 90;
+    const spinAxis = parseFloat(document.getElementById('spin-axis').value) ?? 15;
+
+    // Log velocity vector for debugging the vertical angle = 0 issue
+    console.log(`Vertical angle: ${verticalAngle}°`);
 
     // Convert angles to radians
     const verticalRadians = verticalAngle * Math.PI / 180;
     const horizontalRadians = horizontalAngle * Math.PI / 180;
 
     // Calculate initial velocity components
-    // Using the formula from search result #4
     // x: left-right (baseline direction), y: vertical, z: depth (court length direction)
     const vx = initialSpeed * Math.cos(verticalRadians) * Math.sin(horizontalRadians);
     const vy = initialSpeed * Math.sin(verticalRadians);
     const vz = initialSpeed * Math.cos(verticalRadians) * Math.cos(horizontalRadians);
+
+    // Log the velocity vector for debugging
+    console.log(`Initial velocity: (${vx.toFixed(4)}, ${vy.toFixed(4)}, ${vz.toFixed(4)})`);
 
     // Create the velocity vector
     const initialVelocity = new THREE.Vector3(vx, vy, vz);
@@ -663,11 +617,11 @@ function setupEventListeners() {
     document.getElementById('baseline-position').value = "-1";
     document.getElementById('distance-from-baseline').value = "0.3";
     document.getElementById('ball-height').value = "3";
-    document.getElementById('initial-speed').value = "180"; // 180 km/h = 50 m/s
-    document.getElementById('launch-angle').value = "10";
-    document.getElementById('horizontal-angle').value = "0";
+    document.getElementById('initial-speed').value = "160"; // 160 km/h = 44.4 m/s
+    document.getElementById('launch-angle').value = "-5";
+    document.getElementById('horizontal-angle').value = "10";
     document.getElementById('spin-rate').value = "1800"; // 1800 RPM = 30 rotations per second
-    document.getElementById('spin-axis').value = "90"; // 90 = topsin
+    document.getElementById('spin-axis').value = "15"; // slice
     
     // Add toggle panel functionality
     document.getElementById('toggle-panel').addEventListener('click', function() {
@@ -689,23 +643,42 @@ function handleBallPositionChange() {
     
     // Set a default height if not provided or if it's negative
     if (isNaN(ballHeight) || ballHeight < 0) {
-        ballHeight = 0; // Default height
+        ballHeight = 0; // Default height of 0 meter (on the ground)
         document.getElementById('ball-height').value = "0";
-        updateConnectionLine(); // Update trajectory
     }
     
-    updateBallPosition(baselinePosition, distanceFromBaseline, ballHeight);
+    // Update ball position
+    if (ball) {
+        const zPosition = -COURT_LENGTH/2 + distanceFromBaseline;
+        ball.position.set(baselinePosition, ballHeight, zPosition);
+        
+        // Update the ball light position
+        scene.children.forEach(child => {
+            if (child instanceof THREE.PointLight && child.userData.isBallLight) {
+                child.position.set(baselinePosition, ballHeight + 0.5, zPosition);
+            }
+        });
+        
+        // Update the ball projection
+        if (ballProjection) {
+            ballProjection.position.x = ball.position.x;
+            ballProjection.position.z = ball.position.z;
+        }
+    } else {
+        createTennisBall(baselinePosition, ballHeight, -COURT_LENGTH/2 + distanceFromBaseline);
+    }
+    
+    // Recalculate trajectory with new ball position
+    updateConnectionLine();
 }
 
 function calculateLiftCoefficient(speed, spinRate) {
     const spinSpeed = BALL_RADIUS * spinRate; // vspin = R*ω
-    return 1 / (2 + (speed / spinSpeed));
+    return 2 * spinSpeed / (AIR_DENSITY * BALL_AREA * speed * speed * speed)
 }
 
 function calculateDragCoefficient(speed, spinRate) {
-    const spinSpeed = BALL_RADIUS * spinRate;
-    const ratio = speed / spinSpeed;
-    return 0.55 + 1 / Math.pow(22.5 + 4.2 * Math.pow(ratio, 2.5), 0.4);
+    return 0.55;
 }
 
 /**
@@ -732,11 +705,11 @@ function calculateTrajectory(initialPos, initialVel, spinVector, dt = 0.005, ste
         // Unit vector in direction of velocity
         const velocityUnit = velocity.clone().normalize();
         
-        // Drag force: -0.5 * Cd * rho * A * v^2 * v_hat
+        // Drag force: -0.5 * Cd * rho * A * v^2 * (v / v_bar)
         const dragCoef = calculateDragCoefficient(speed, spinVector.length());
         const dragForce = velocityUnit.clone().multiplyScalar(-0.5 * dragCoef * AIR_DENSITY * BALL_AREA * speed * speed);
         
-        // Magnus force: 0.5 * Cl * rho * A * v^2 * (spin × v_hat)
+        // Magnus force: 0.5 * Cl * rho * A * v^2 * (spin x velocity)
         const magnusDirection = new THREE.Vector3();
         magnusDirection.crossVectors(spinVector, velocityUnit);
         const liftCoef = calculateLiftCoefficient(speed, spinVector.length());
