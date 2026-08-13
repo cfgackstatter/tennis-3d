@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Baseline Lab — Tennis Flight Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="scene-container"></div>
+
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-dot" aria-hidden="true"></span>
+            <div>
+                <h1>Baseline Lab</h1>
+                <p>Flight mechanics for players and scientists</p>
+            </div>
+        </div>
+        <p class="topbar-meta">ITF court · 23.77 × 10.97 m</p>
+        <button id="toggle-panel" type="button" class="ghost-btn" aria-controls="control-panel" aria-expanded="true">Tune shot</button>
+    </header>
+
+    <nav id="presets" class="presets" aria-label="Shot presets"></nav>
+
+    <aside id="control-panel" class="panel">
+        <div class="panel-head">
+            <div>
+                <h2>Shot setup</h2>
+                <p id="preset-blurb">ATP average flat/slice</p>
+            </div>
+            <button id="close-panel" type="button" class="icon-btn" aria-label="Close panel">✕</button>
+        </div>
+
+        <div class="panel-body">
+            <section class="section">
+                <h3>Contact</h3>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="baseline-position">Baseline</label>
+                        <div class="readout">
+                            <input type="number" id="baseline-position-num" step="0.1" value="-0.8">
+                            <span>m</span>
+                        </div>
+                    </div>
+                    <input type="range" id="baseline-position" min="-5.5" max="5.5" step="0.1" value="-0.8">
+                    <p class="hint">− right · + left, from the server’s view</p>
+                </div>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="distance-from-baseline">Inside court</label>
+                        <div class="readout">
+                            <input type="number" id="distance-from-baseline-num" min="0" step="0.1" value="0.45">
+                            <span>m</span>
+                        </div>
+                    </div>
+                    <input type="range" id="distance-from-baseline" min="0" max="12" step="0.1" value="0.45">
+                    <p class="hint">Distance forward from the baseline</p>
+                </div>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="ball-height">Contact height</label>
+                        <div class="readout">
+                            <input type="number" id="ball-height-num" min="0" step="0.05" value="2.80">
+                            <span>m</span>
+                        </div>
+                    </div>
+                    <input type="range" id="ball-height" min="0.3" max="3.4" step="0.05" value="2.80">
+                    <p class="hint">Pro serve trophy pose is about 2.7–2.9 m</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>Launch</h3>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="initial-speed">Speed</label>
+                        <div class="readout">
+                            <input type="number" id="initial-speed-num" min="20" max="260" step="1" value="192">
+                            <span>km/h</span>
+                        </div>
+                    </div>
+                    <input type="range" id="initial-speed" min="20" max="260" step="1" value="192">
+                    <p class="hint">ATP 1st serve ~192 km/h · rally FH ~115 km/h</p>
+                </div>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="launch-angle">Vertical angle</label>
+                        <div class="readout">
+                            <input type="number" id="launch-angle-num" min="-45" max="45" step="0.5" value="-6">
+                            <span>°</span>
+                        </div>
+                    </div>
+                    <input type="range" id="launch-angle" min="-45" max="45" step="0.5" value="-6">
+                    <p class="hint">Negative = down, typical first serve −4° to −8°</p>
+                </div>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="horizontal-angle">Horizontal angle</label>
+                        <div class="readout">
+                            <input type="number" id="horizontal-angle-num" min="-45" max="45" step="0.5" value="6">
+                            <span>°</span>
+                        </div>
+                    </div>
+                    <input type="range" id="horizontal-angle" min="-45" max="45" step="0.5" value="6">
+                    <p class="hint">− left · + right of the center line</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>Spin</h3>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="spin-rate">Spin rate</label>
+                        <div class="readout">
+                            <input type="number" id="spin-rate-num" min="0" max="5000" step="50" value="2500">
+                            <span>rpm</span>
+                        </div>
+                    </div>
+                    <input type="range" id="spin-rate" min="0" max="5000" step="50" value="2500">
+                    <p class="hint">1st serve ~2,500 · kick ~4,000–4,500 · FH ~2,800</p>
+                </div>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="spin-axis">Spin axis</label>
+                        <div class="readout">
+                            <input type="number" id="spin-axis-num" min="0" max="360" step="5" value="25">
+                            <span>°</span>
+                        </div>
+                    </div>
+                    <input type="range" id="spin-axis" min="0" max="360" step="5" value="25">
+                    <p class="hint">90° topspin · 60° kick (7-to-1) · 270° backspin · 0°/180° sidespin</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>Ball surface</h3>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="fuzz">Felt</label>
+                        <div class="readout">
+                            <input type="number" id="fuzz-num" min="0" max="100" step="5" value="50">
+                            <span>%</span>
+                        </div>
+                    </div>
+                    <input type="range" id="fuzz" min="0" max="100" step="5" value="50">
+                    <p class="hint" id="fuzz-hint">50% = typical in-play ball. 0% worn/dead felt, 100% new and fluffy.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>Environment</h3>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="altitude">Altitude</label>
+                        <div class="readout">
+                            <input type="number" id="altitude-num" min="0" max="3000" step="50" value="0">
+                            <span>m</span>
+                        </div>
+                    </div>
+                    <input type="range" id="altitude" min="0" max="3000" step="50" value="0">
+                    <p class="hint">Thinner air up high — Madrid 650 m, Denver 1,600 m, Mexico City 2,240 m</p>
+                </div>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="temperature">Temperature</label>
+                        <div class="readout">
+                            <input type="number" id="temperature-num" min="-10" max="45" step="1" value="20">
+                            <span>°C</span>
+                        </div>
+                    </div>
+                    <input type="range" id="temperature" min="-10" max="45" step="1" value="20">
+                    <p class="hint">Hot air is less dense, so the ball carries farther</p>
+                </div>
+                <div class="field">
+                    <div class="field-top">
+                        <label for="humidity">Humidity</label>
+                        <div class="readout">
+                            <input type="number" id="humidity-num" min="0" max="100" step="1" value="50">
+                            <span>%</span>
+                        </div>
+                    </div>
+                    <input type="range" id="humidity" min="0" max="100" step="1" value="50">
+                    <p class="hint">Water vapor is lighter than dry air — humid days fly a bit longer</p>
+                </div>
+                <p class="hint" id="density-hint">Air density 1.20 kg/m³ · 1013 hPa</p>
+            </section>
+        </div>
+    </aside>
+
+    <footer class="ticker">
+        <div class="ticker-row player-row">
+            <div class="stat verdict" id="stat-verdict-wrap">
+                <span class="stat-label">Call</span>
+                <strong id="stat-verdict">—</strong>
+                <em id="stat-verdict-detail"></em>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Net</span>
+                <strong id="stat-clearance">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Flight</span>
+                <strong id="stat-flight">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Landing speed</span>
+                <strong id="stat-impact">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Apex</span>
+                <strong id="stat-apex">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Range</span>
+                <strong id="stat-range">—</strong>
+            </div>
+        </div>
+        <div class="ticker-row lab-row">
+            <div class="stat">
+                <span class="stat-label">S = rω/v</span>
+                <strong id="stat-spin-param">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">C<sub>L</sub> / C<sub>D</sub></span>
+                <strong id="stat-coeffs">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Re</span>
+                <strong id="stat-reynolds">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Air ρ · P</span>
+                <strong id="stat-air">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">F<sub>D</sub> · F<sub>M</sub> · mg</span>
+                <strong id="stat-forces">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Landing x, z</span>
+                <strong id="stat-xz">—</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Spin type</span>
+                <strong id="stat-spin-kind">—</strong>
+            </div>
+        </div>
+        <p class="camera-hint">Drag to orbit · scroll to zoom</p>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

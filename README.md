@@ -1,80 +1,64 @@
-# 3D Tennis Court Simulator
+# Baseline Lab
 
-A web-based 3D tennis court visualization tool that simulates realistic ball trajectories with physics-based calculations.
+Interactive 3D tennis flight lab for players and for physics / biomechanics work. Place a ball, pick a tour-typical shot, and see a physics-based trajectory on an ITF court (23.77 m × 10.97 m).
 
-![3D Tennis Court Visualization](assets/tennis-court.png)
+![Baseline Lab](./assets/baseline-lab.png)
 
-## Overview
+## What it models
 
-This application provides an interactive 3D tennis court where users can place a ball at various positions and observe realistic flight trajectories based on physics parameters including speed, launch angle, and spin. The simulator accounts for gravity, drag forces, and the Magnus effect to create accurate ball flight paths.
+The ball is a 57 g, 33.5 mm sphere with:
+
+- Gravity
+- Aerodynamic drag and Magnus lift (spin parameter \(S = r\omega / v\))
+- Moist-air density from **altitude, temperature, and humidity**
+- **Felt / fuzz** (worn → new): extra nap radius, higher \(C_D\) / \(C_L\), and spin-down torque
+- Heun (RK2) integration of the equations of motion
+
+Default shot is an ATP-average first serve: **192 km/h**, **2.80 m** contact, **2,500 rpm**, **−6°** launch, sea level, 20 °C, 50% RH, mid-wear felt.
 
 ## Features
 
-- Fully interactive 3D tennis court with proper dimensions (23.77m × 10.97m)
-- Realistic ball trajectory simulation with physics calculations
-- Adjustable ball placement (baseline position, distance from baseline, height)
-- Configurable ball physics parameters:
-  - Speed (km/h) - Ranges from 20-260 km/h with defaults suitable for professional serves
-  - Launch angle (degrees) - Controls the vertical angle of the ball's initial trajectory
-  - Spin rate (RPM) - Simulates topspin, backspin, and sidespin effects
-  - Spin axis (degrees) - Determines the orientation of the spin
-- Visual indicators:
-  - Color-coded net intersection marker (green when ball clears the net, red when it hits)
-  - Net clearance measurement display
-  - Ball landing point visualization
-  - Ball ground projection
-- Camera controls for rotating and zooming the view
-- Collapsible control panel for a cleaner interface
+- Shot presets: 1st serve, kick serve (7-to-1 top + side), slice serve, forehand, backhand, drop shot
+- Contact, launch, spin, felt, and environment controls
+- Live call (service box / in / long / net), net clearance, flight time, landing speed, range, apex
+- Lab readouts: \(S\), \(C_L\) / \(C_D\), Reynolds number, \(F_D\) · \(F_M\) · \(mg\), air \(\rho\) and pressure, spin type
+- Orbit camera (drag to rotate, scroll to zoom)
+- Responsive HUD (bottom sheet on phones)
 
-## Technical Details
+## Run
 
-The application is built using:
-- Three.js for 3D rendering and visualization
-- JavaScript for physics calculations and user interactions
-- HTML5 and CSS3 for the user interface
-- Flask as the backend web server
-
-The physics model incorporates:
-- Gravitational forces (9.81 m/s²)
-- Aerodynamic drag based on air density and ball properties
-- Magnus effect calculations for spin-induced forces
-- Numerical integration to solve the equations of motion
-
-## Usage
-
-1. Adjust the ball's position using the Baseline, Distance, and Height controls
-2. Set the desired physics parameters (Speed, Angle, Spin, Spin Axis)
-3. The trajectory will automatically update as you change parameters
-4. Use mouse to rotate the camera view (click and drag) and zoom (scroll)
-5. The net clearance display shows how much the ball clears or hits the net
-6. The target sphere shows where the ball would land
-
-## Installation
-
-1. Clone the repository
-2. Install the required dependencies:
 ```console
-pip install flask
+make install
+make launch
 ```
-3. Run the application:
+
+Open the URL Vite prints (usually `http://localhost:5173`). `make launch` installs dependencies first if they are missing.
+
 ```console
-python application.py
+make test         # physics unit tests
+make build        # production bundle in dist/
+make preview      # serve the production build
+make clean        # remove dist/ and node_modules/
 ```
-4. Open your browser and navigate to `http://localhost:5000`
 
-## File Structure
+Needs a modern browser with WebGL. If the court is blank, enable hardware acceleration or try Chrome, Firefox, or Edge.
 
-- `application.py` - Flask server implementation
-- `/static/js/tennis_court.js` - Main JavaScript file with 3D visualization and physics
-- `/static/css/style.css` - Styling for the application
-- `/templates/index.html` - Main HTML template
+## Stack
 
-## Browser Compatibility
+- Vite 8 + Three.js r185
+- `src/physics.js` — renderer-free flight model
+- Vitest for net height, coefficients, atmosphere, presets, and felt
 
-The application works best in modern browsers with WebGL support. If you encounter rendering issues, try:
-- Enabling hardware acceleration in your browser settings
-- Updating your graphics drivers
-- Using a different browser (Chrome, Firefox, or Edge recommended)
+## Layout
+
+- `index.html` — page shell
+- `src/main.js` — Three.js scene and HUD
+- `src/physics.js` — ball flight model
+- `src/physics.test.js` — unit tests
+- `src/presets.js` — ATP-typical shot presets
+- `src/style.css` — layout
+- `Makefile` — install / launch / test / build
+- `assets/baseline-lab.png` — README screenshot
 
 ## License
 
@@ -82,5 +66,5 @@ The application works best in modern browsers with WebGL support. If you encount
 
 ## Acknowledgments
 
-- Three.js library for 3D rendering
-- Tennis physics research papers for trajectory calculations
+- Three.js
+- Tennis aerodynamics literature (Stepanek, Mehta, Chadwick, Cross) for drag, lift, and felt

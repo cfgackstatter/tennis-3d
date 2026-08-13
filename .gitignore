@@ -1,49 +1,24 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
+node_modules/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
+.vite/
 
-# Flask
-instance/
-.webassets-cache
-
-# Virtual Environment
+# Python leftovers
+__pycache__/
 venv/
-ENV/
-env/
+.venv/
 
-# IDE specific files
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
 
-# Node modules (if you add any JavaScript packages)
-node_modules/
-npm-debug.log
-
-# Logs
-logs/
-*.log
-
 # Local configuration
 .env
-.flaskenv
+.env.local
